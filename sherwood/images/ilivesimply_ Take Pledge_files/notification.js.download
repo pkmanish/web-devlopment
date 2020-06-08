@@ -1,0 +1,89 @@
+/* view notification details here */
+$(document).ready(function(){
+	$(document).on('click','.view_notification_detail',function(){ 
+		var notification_id	=	$(this).attr('data-id');
+		var redirectUrl		=	$(this).attr('data-href');
+		
+		$.ajax({
+			data:{'notification_id':notification_id},
+			url : NotificationMarkAsReadUrl,
+			beforeSend:function(e){
+				blockedUI();
+			},
+			success: function(data){
+				unblockedUI();
+				if(data.status == "success"){
+					window.location.href	=	redirectUrl;
+				}else{
+					
+				}
+			}
+		});
+	});
+	
+	
+	
+	
+	/**
+	 * function to delete messages
+	 * Check uncheck main checkbox
+	 */
+	$(document).on('click','#deleteNotificationButton',function(e){ 
+		var allVals = [];
+		$('.userNotificationCheckBox:checked').each(function() {
+			if($(this).is(":checked")){
+				
+				allVals.push($(this).val());
+			}
+		});
+		
+		if(allVals.length > 0){
+			e.stopImmediatePropagation();
+			
+			bootbox.confirm({
+				message: delete_msg,
+				buttons: {
+					confirm: {
+						className: 'btn btn-primary'
+					},
+					cancel: {
+						className: 'btn btn-primary btn_theme_blue_color'
+					}
+				},
+				callback: function (result) {
+					if (result) {
+						$.ajax({
+							url: delete_messages_url,
+							type: 'post',
+							headers: {
+								'X-CSRF-TOKEN': csrf_token
+							},
+							data: { ids: allVals },
+							beforeSend: function() { 
+								blockedUI();
+							},
+							success:function(data) {
+								unblockedUI();
+								window.location.href=window.location.href;
+							}
+						});
+					}
+				}
+			});
+			
+			e.preventDefault();
+		}else{
+			showErrorMessageTopRight(please_select_atleast_one_message);
+		}
+	});
+	/***************************       delete messsage here ****************************************/
+
+
+
+	
+	
+	
+	
+	
+	
+});

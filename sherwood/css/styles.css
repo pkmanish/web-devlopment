@@ -1,0 +1,88 @@
+body{
+    /* background: radial-gradient(
+        60deg,
+        rgbe(255, 165, 150, 0.5) 5%,
+        rgbe(0, 228, 255, 0.35)
+    ); */
+    background-image: linear-gradient(
+        60deg,
+        rgba(255, 165, 150, 0.5) 5%,
+        rgba(0, 228, 255, 0.35)
+    ),url(/images/bg.jpg);
+    background-repeat: no-repeat;
+    background-size: cover;
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    background-position: center;
+    background-attachment: fixed;
+
+}
+
+
+/*---------------- main section block starts heae-------------------*/
+#mainSection{
+    background: #fff;
+    width: 20%;
+    padding: 40px;
+    margin: 100px auto;
+    text-align: center;    
+border-radius: spx;
+
+}
+img{
+    border-radius: 100%;
+}
+ul{
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+
+
+/*in css have property called display */
+
+
+ul li {
+    display: inline-block;
+    padding: 10px;
+}
+
+/*------main section block ends hear-------*/
+
+
+h1 {
+    color: #313f47;
+    font-weight: 300;
+    font-size: 27px;
+    text-transform: uppercase;
+    letter-spacing: 5.5px;
+    /*text-shadow: 1px 4px 1px red;*/
+    /*text-decoration: line-through;*/
+    /*text-indent: -90px;*/
+
+}
+
+img:hover {
+    transform: rotate(360deg);
+    transform: ease-in-out all 1.9s;
+}
+
+i {
+    font-size: 24px;
+}
+
+.fa-twitter:hover {
+    color: #00acee;
+}
+
+.fa-facebook-square:hover{
+    color: #3b5998;
+}
+
+
+.fa-Instagram-square:{
+color:  #231F20
+}
