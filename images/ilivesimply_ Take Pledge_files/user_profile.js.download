@@ -1,0 +1,436 @@
+/** Open model box when loggedin user wants to change phone number */
+
+var timeInterval; 
+
+function updatePhone(){
+	$('#updatePhoneModal').modal('show');
+}
+
+
+/** Open model box when loggedin user wants to change his email address*/
+function updateEmail(){
+	$('#updateEmailModal').modal('show');
+}
+
+
+$(document).ready(function(){
+	/** 
+	* Email update form validations 
+	* Called when user wants to change email address
+	**/
+	$('#emailUpdateForm').formValidation({
+		message: ERROR_ENTER_VALID_VALUE,
+		fields: {
+			'email': {
+				row: '.mws-form-item',
+				err: '.email_err',
+				validators: {
+					notEmpty: {
+						message: ERROR_ENTER_EMAIL_ADDRESS
+					},
+				}
+			}
+		}
+	}).on('success.form.fv', function(e, data) {
+		var return_url = $('#return_url').val();
+		e.preventDefault(); 
+		$.ajax({
+			type 		: 	"POST",
+			url  		: 	updateEmailUrl,
+			headers		: 	{ 'X-CSRF-TOKEN': csrf_token },
+			data		:	$("#emailUpdateForm").serialize(),
+			beforeSend	: 	function() {
+				blockedUI();
+			},
+			success : function(r){
+				
+				/* If user is logged-out then redirect to login page **/
+				if(typeof(r.status) != "undefined" && r.status !== null && r.status == 'no_logged_in'){
+					window.location.href = return_url;
+				}
+				
+				if(r.status == "success"){
+					window.location.reload();
+				}
+				else if(r.status == "not_updated"){
+					window.location.reload();
+				}
+				else{
+					$('.email_err').html(r.msg);
+				}
+				unblockedUI();
+			}
+		});
+	});
+
+
+
+	/** 
+	* Phone number update form validations 
+	* Called when user wants to change phone address
+	**/
+	$('#phoneUpdateForm').formValidation({
+		message: ERROR_ENTER_VALID_VALUE,
+		fields: {
+			'phone_number': {
+				row: '.mws-form-item',
+				err: '.phone_err',
+				validators: {
+					notEmpty: {
+						message: ERROR_ENTER_MOBILE_NO
+					},
+				}
+			}
+		}
+	}).on('success.form.fv', function(e, data) {
+		e.preventDefault(); 
+		var return_url = $('#return_url').val();
+		$.ajax({
+			type 		: 	"POST",
+			url  		: 	updatePhoneUrl,
+			headers		: 	{ 'X-CSRF-TOKEN': csrf_token },
+			data		:	$("#phoneUpdateForm").serialize(),
+			beforeSend	: 	function() {
+				blockedUI();
+			},
+			success : function(r){
+				
+				/* If user is logged-out then redirect to login page **/
+				if(typeof(r.status) != "undefined" && r.status !== null && r.status == 'no_logged_in'){
+					window.location.href = return_url;
+				}
+				
+				if(r.status == "success"){
+					resendOtpTime	=	r.resend_time;
+					currentTime		=	r.current_time;
+					timerOn('update_phone');
+					showSuccessMessageTopRight(r.message);
+					$('#updatePhoneModal').modal('hide');
+					$("#type").val("update_phone");
+					setTimeout(function(){
+						$('#submitOTPModal').modal('show');
+						$('body').addClass('modal-open');
+					},1000);
+				}
+				else if(r.status == "not_updated"){
+					if(r.message){
+						showErrorMessageTopRight(r.message);	
+					}
+					$('#updatePhoneModal').modal('hide');
+				}
+				else{
+					$('.phone_err').html(r.message);
+				}
+				unblockedUI();
+			}
+		});
+	});
+	
+	
+	
+	
+	/** 
+	* Phone number update form validations 
+	* Called when user wants to change phone address
+	**/
+	$('#phoneUpdateFormVerificationPage').formValidation({
+		message: ERROR_ENTER_VALID_VALUE,
+		fields: {
+			'phone_number': {
+				row: '.mws-form-item',
+				err: '.phone_err',
+				validators: {
+					notEmpty: {
+						message: ERROR_ENTER_MOBILE_NO
+					},
+				}
+			}
+		}
+	}).on('success.form.fv', function(e, data) {
+		e.preventDefault(); 
+		var return_url = $('#return_url').val();
+		$.ajax({
+			type 		: 	"POST",
+			url  		: 	updateOriginalPhone,
+			headers		: 	{ 'X-CSRF-TOKEN': csrf_token },
+			data		:	$("#phoneUpdateFormVerificationPage").serialize(),
+			beforeSend	: 	function() {
+				blockedUI();
+			},
+			success : function(r){
+				
+				/* If user is logged-out then redirect to login page **/
+				if(typeof(r.status) != "undefined" && r.status !== null && r.status == 'no_logged_in'){
+					window.location.href = return_url;
+				}
+				
+				if(r.status == "success"){
+					resendOtpTime	=	r.resend_time;
+					currentTime		=	r.current_time;
+					timerOn('update_phone');
+					showSuccessMessageTopRight(r.message);
+
+				}
+				else if(r.status == "not_updated"){
+					showErrorMessageTopRight(r.message);
+				}
+				else{
+					$('.phone_err').html(r.message);
+				}
+				unblockedUI();
+			}
+		});
+	});
+	
+	
+	
+	
+	/** 
+	* OTP form validations 
+	* Called when user submit otp popup
+	**/
+	$('#OTPForm').formValidation({
+        message: ERROR_ENTER_VALID_VALUE,
+        fields: {
+            'otp': {
+                row: '.mws-form-item',
+				err : '.otp_err',
+                validators: {
+                    notEmpty: {
+                        message: ERROR_ENTER_OTP
+                    },
+                }
+            }
+        }
+    }).on('success.form.fv', function(e, data) {
+		var return_url = $('#return_url').val();
+		e.preventDefault(); 
+		var typeVal = $("#type").val();
+		if(typeVal == "verify_phone"){
+			url = submitVerifyOTPUrl;
+		}
+		else if(typeVal == "update_phone"){
+			url = submitTempOTPUrl;
+		}
+		else if(typeVal == "parent_otp"){
+			url = verifyParentOtp;
+		}
+        $.ajax({
+			type 		: 	"POST",
+			url  		: 	url,
+			headers		: 	{ 'X-CSRF-TOKEN': csrf_token },
+			data		:	$("#OTPForm").serialize(),
+			beforeSend	: 	function() {
+				blockedUI();
+			},
+			success : function(r){
+				 
+				/* If user is logged-out then redirect to login page **/
+				if(typeof(r.status) != "undefined" && r.status !== null && r.status == 'no_logged_in'){
+					window.location.href = return_url;
+				}
+			
+				unblockedUI();
+				if(r.status == "success"){
+					window.location.reload();
+				}else{
+					$('.otp_err').html(r.errors.otp);
+				}
+			}
+		});
+    });
+	
+	
+	
+	
+	/** 
+	* OTP form validations 
+	* Called when user submit otp popup
+	**/
+	$('#parentOTPForm').formValidation({
+        message: ERROR_ENTER_VALID_VALUE,
+        fields: {
+            'otp': {
+                row: '.mws-form-item',
+				err : '.otp_err',
+                validators: {
+                    notEmpty: {
+                        message: ERROR_ENTER_OTP
+                    },
+                }
+            }
+        }
+    }).on('success.form.fv', function(e, data) {
+		var return_url = $('#return_url').val();
+		e.preventDefault(); 
+		url = verifyParentOtp;
+        $.ajax({
+			type 		: 	"POST",
+			url  		: 	url,
+			headers		: 	{ 'X-CSRF-TOKEN': csrf_token },
+			data		:	$("#parentOTPForm").serialize(),
+			beforeSend	: 	function() {
+				blockedUI();
+			},
+			success : function(r){
+				 
+				/* If user is logged-out then redirect to login page **/
+				if(typeof(r.status) != "undefined" && r.status !== null && r.status == 'no_logged_in'){
+					window.location.href = return_url;
+				}
+			
+				unblockedUI();
+				if(r.status == "success"){
+					window.location.reload();
+				}else{
+					$('.otp_err').html(r.errors.otp);
+				}
+			}
+		});
+    });
+	
+	
+	
+	
+	/**
+	* Reload window when user close enter otp model box.
+	**/
+	//$('#submitOTPModal').on('hidden.bs.modal', function () {
+	//	window.location.reload();
+	//})
+	
+	
+	/**Resend OTP for nerification new phone number ***/
+	$('.resend_otp').click(function(){
+		resendOtp(resendTempOTPUrl,"update_phone");
+		$("#type").val("update_phone");
+		$('#submitOTPModal').modal('show');
+	});
+
+	
+	/**Resend OTP for nerification phone number ***/
+	$('.resend_verification_otp').click(function(){
+		resendOtp(resendOTPverificationUrl,"verify_phone");
+		$("#type").val("verify_phone");
+		$('#submitOTPModal').modal('show');
+	});
+
+	
+});
+
+ 
+ 
+$(document).ready(function(){
+	/**
+	 * Function for open update phone modal
+	 * param status as status of order
+	 * param orderNumber as order number
+	**/
+	//phoneNumValidate('userMobile','UserPhone_error','userPhone');
+});
+
+
+
+/**
+ * Function for resend otp
+**/
+function resendOtp(url,type){
+	var return_url = $('#return_url').val();
+	$.ajax({
+		type 		: 	"POST",
+		url  		: 	url,
+		headers		: 	{ 'X-CSRF-TOKEN': csrf_token },
+		beforeSend	: 	function() {
+			blockedUI();
+		},
+		success : function(r){
+			/* If user is logged-out then redirect to login page **/
+			if(typeof(r.status) != "undefined" && r.status !== null && r.status == 'no_logged_in'){
+				window.location.href = return_url;
+			}
+			unblockedUI();
+			if(r.status == "success"){
+				resendOtpTime	=	r.resend_time;
+				currentTime		=	r.current_time;
+				timerOn(type);
+				showSuccessMessageTopRight(r.message);
+			}
+			else{
+				showErrorMessageTopRight(r.message);
+			}
+		}
+	});
+	
+	
+}
+
+
+
+//~ $(window).on('load',function(){
+	//~ $("#type").val("verify_phone");
+	//~ timerOn("verify_phone");
+	//~ $('#submitOTPModal').modal('show');
+//~ });
+
+
+/**
+ * Function for open update phone modal
+ * param status as status of order
+ * param orderNumber as order number
+**/
+function timerOn(type){
+	
+	var counter_id = 'demo';
+	if(type == 'parent_otp'){
+		counter_id = 'parent_demo';
+	} 
+	
+	// Set the date we're counting down to
+	var countDownDate = new Date(resendOtpTime).getTime();
+	var now = new Date(currentTime).getTime();
+	clearInterval(timeInterval); 
+	// Update the count down every 1 second
+	timeInterval = setInterval(function() {
+		// Get todays date and time
+		// var now = new Date().getTime();
+		// Find the distance between now and the count down date
+		var distance = countDownDate - now;
+		// Time calculations for days, hours, minutes and seconds
+		var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+		var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+		var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+		var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+		// alert(minutes+" minutes "+seconds+" seconds");
+		// Display the result in the element with id="demo"
+ 
+		if (distance > 0) {
+			if(minutes > 0)
+			{
+				document.getElementById(counter_id).innerHTML =   "Your OTP will expire in :  "+minutes + "m " + seconds + "s";
+			}
+			else{
+				document.getElementById(counter_id).innerHTML =   "Your OTP will expire in :" + seconds + "s";
+			}
+		}
+		
+		// If the count down is finished, write some text
+		if (distance < 0) {
+			clearInterval(timeInterval);
+			if(type == 'update_phone'){
+				document.getElementById(counter_id).innerHTML = '<a href="javascript:void(0)" onClick="resendOtp('+"'"+resendTempOTPUrl+"'"+','+"'"+type+"'"+')">Resend OTP</a>';
+			}
+			else if(type == "verify_phone"){
+				if(typeof current_route !== 'undefined' && current_route == 'User.accountVerificationAfterSignup'){
+					document.getElementById(counter_id).innerHTML = 'Your OTP has been expired.';
+				} else {
+					document.getElementById(counter_id).innerHTML = '<a href="javascript:void(0)" onClick="resendOtp('+"'"+resendOTPverificationUrl+"'"+','+"'"+type+"'"+')">Resend OTP</a>';
+				}
+				
+			}
+			else if(type == "parent_otp"){
+				document.getElementById(counter_id).innerHTML = '<a href="javascript:void(0)" onClick="resendOtp('+"'"+resendParentOtp+"'"+','+"'"+type+"'"+')">Resend OTP</a>';
+			}
+		}
+		now	=	now + 1000;
+	}, 1000);
+}

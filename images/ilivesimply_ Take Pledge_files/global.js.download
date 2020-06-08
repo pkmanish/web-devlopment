@@ -1,0 +1,690 @@
+$(document).ready(function(){
+	/** For Select2 */
+	$('.autocomplete').select2({'width':'100%'});
+	
+	
+	/** For tooltip */
+	$('[data-toggle="tooltip"]').tooltip();
+	
+	/* forgot password*/
+	$('#forgotPasswordForm').formValidation({
+		message: 'This value is not valid',
+		fields: {
+			'email': {
+				row: '.form-group',
+				validators: {
+					notEmpty: {
+						message: ERROR_ENTER_EMAIL_ADDRESS
+					},
+					emailAddress: {
+						message: ERROR_ENTER_VALID_EMAIL_ADDRESS	
+					}
+				}
+			}
+		}
+	});
+	/* forgot password*/
+	
+	
+	
+	/* reset password*/
+	$('#resetForm').formValidation({
+		message: 'This value is not valid',
+		fields: {
+			
+			'new_password': {
+				row: '.form-group',
+				validators: {
+					notEmpty: {
+						message: ERROR_ENTER_PASSWORD
+					},
+					regexp: {
+						regexp: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/,
+						message: PASSWORD_REGX_ERROR_MESSAGE
+					}
+				}
+			},
+			'new_password_confirmation': {
+				row: '.form-group',
+				validators: {
+					identical: {
+						field: 'new_password',
+						message: ERROR_PASSWORD_CONFIRM_PASSWORD_NOT_MATCH
+					},
+				}
+			},
+	
+        }
+	});/* reset password*/
+	
+	
+	/*################# Used for header searching #########*/
+	$('.header_search_link').click(function(e){
+		e.stopImmediatePropagation();
+		//get values
+		var currentSearchUrl	=	$(this).attr('href');
+		handleSearch(currentSearchUrl);
+		e.preventDefault();
+	});
+	/*################# End Code for header searching #########*/
+	
+	$('#headerSearchForm').on('submit',function(e){
+		e.stopImmediatePropagation();
+		var currentSearchUrl	=	$(this).attr('action');
+		handleSearch(currentSearchUrl);
+		e.preventDefault();
+	});
+	
+	
+	$(document).on('keyup','#userMobile',function(){
+		$('.error_phone').html('');
+	});
+	
+	
+	$(document).on('keyup','#email',function(){
+		$('.error_email').html('');
+	});
+	
+	
+	$(document).on('keyup','#otp_verify',function(){
+		$('.otp_verify').html('');
+	});
+	
+	
+	$(document).on('keyup','#otp',function(){
+		$('.otp_err').html('');
+	});
+});	
+
+/*function for handle hearder search*/
+
+function handleSearch(currentSearchUrl){
+	//get values
+	var searchType	 		=	$('#header_search_type').val();
+	var keyword 			=	$('#header_keyword').val();
+	
+	var categoryString 		= 	'?search_type='+searchType;
+	var keywordString 		= 	'&keyword='+keyword;
+	var reExp 				= 	/search_type=(\w*\-*\w*)*/;
+	var reExp2 				= 	/keyword=[a-zA-Z0-9\"\/\%\(\).'?!,@$#-_ \n\r]*/;
+	if(categoryString != '' || keyword != ''){
+		if(searchType == 'product'){
+			currentSearchUrl = product_url;
+		}else if(searchType == 'service'){
+			currentSearchUrl = vendor_url;
+		}
+		var searchUrl  = currentSearchUrl+categoryString+keywordString;
+		window.location.replace(searchUrl);
+		
+	}else {
+		showErrorMessageTopRight('Please enter keyword for searching.');
+	}
+}
+
+
+
+/** ##########  Function for IntlTel Input  ########################*/
+function phoneNumValidate(phone_field,error_box_id,valid_msg_id){
+
+    var telInput;
+    var errorMsg;
+    var validfield;
+    telInput = $("#"+phone_field),
+    errorMsg = $("."+error_box_id),
+    validfield = $("#"+valid_msg_id);
+   
+    var isvalid_number = 0;
+    
+    // initialise plugin
+    telInput.intlTelInput({
+        utilsScript: WEBSITE_URL+"/js/intl-tel-input/utils.js",
+        formatOnDisplay : false,
+		initialCountry : 'ae',
+    });
+	
+	
+    var reset = function() {
+        telInput.removeClass("error");
+        // errorMsg.addClass("hide");
+        if(validfield.length) validfield.val("");
+    };
+
+    // on blur: validate
+    telInput.blur(function() {
+    
+        //reset();
+        if ($.trim(telInput.val())) {
+              
+            var tesval = telInput.intlTelInput("isValidNumber");
+			
+            if(tesval == false){
+                $(errorMsg).html(PLEASE_ENTER_VALID_MOBILE_NO);
+                validfield.val("");
+                return false;
+            }else if(tesval == true){
+                var countryData = telInput.intlTelInput("getSelectedCountryData");
+				var countryCode = countryData.dialCode;
+				countryCode = "+" + countryCode; // convert 1 to +1
+				if(countryCode != '')
+				{
+				$('.dial_code').val(countryCode);
+				}
+                
+                var numberType = telInput.intlTelInput("getNumberType");
+               
+                if((numberType == intlTelInputUtils.numberType.MOBILE)  || (numberType == intlTelInputUtils.numberType.FIXED_LINE_OR_MOBILE)){
+                    isvalid_number = 1;
+                }
+                if (isvalid_number==0) {
+                    // is a mobile number
+                    $(errorMsg).html(PLEASE_ENTER_VALID_MOBILE_NO);
+                    validfield.val("");
+                    return false;
+                }
+                telInput.val( telInput.intlTelInput("getNumber"));
+                if(validfield.length)
+                    validfield.val(telInput.intlTelInput("getNumber"));
+                $(errorMsg).html('');
+                return true;
+                    
+            }
+        }
+    }).trigger('blur');
+    
+    // on keyup / change flag: reset
+    telInput.on("keyup change", reset);
+    
+    //if field is empty then msg is not showing
+    telInput.keyup(function() {
+		if (!$.trim(telInput.val())) {
+			$(errorMsg).html('');
+		}	
+	})
+}
+
+
+/**
+* Function For Ajax Submit Custom Function
+*
+* @param form as form data,
+* @param redirectPath as redirect url,
+*
+*/
+function ajax_submit_custom_function(form, error_div_id,redirectPath,successMessage,isFormReset,$btn,callback){
+	blockedUI();
+	var error_div	=	$("#"+error_div_id);
+	error_div.hide();
+	error_div.html('');
+	var options = {
+		success:function(r){
+			if(r.status == 'success'){
+				if(redirectPath != ''){
+					window.location.href	=	(redirectPath) ?  redirectPath : r.link;
+					return false;
+				}else{
+					location.reload(true);
+					return false;
+				}
+				
+				if(isFormReset == 'yes'){
+					$("#"+form)[0].reset();
+					$("#"+form).find('.help-inline.error-message').html('');
+				}
+				
+				if(r.message != '') {
+					notice('success',r.message,'success');
+				}
+				
+				if (typeof callback === "function") {
+					callback(true);
+				}
+				unblockedUI();
+				return true;
+			}else if(r.status == 'redirect'){
+				if (r.link != '') {
+					location.href = r.link;
+				}
+			}else{
+				try{
+					data	=	r;
+					switch(data.status){
+						case 'redirect' :
+							location.href	=	data.link;
+							return false;
+						break;
+						case 'error' :
+							var firstError = '';
+							if(data['status'] == 'error'){
+								$('.error-msg').html('');
+								$('.error-message').html('');
+								
+								$("#"+form).find(".border-red").removeClass('border-red');
+								$.each(data['errors'],function(index,html){
+									if(data['errors'][index]){
+										firstError = (firstError == '') ? index : firstError;
+										$("#"+form).find("input[name="+index+"]").addClass('border-red');
+										$("#"+form).find("#"+index).addClass('border-red');
+										$("#"+form).find('.error_'+index).html(html);
+									}
+								});
+							}
+							if(isFormReset == 'modal-error'){
+								if($("#"+form+" .error_"+firstError).length>0){
+									$("#"+form).closest('.modal-scroll-on-error').animate({scrollTop:($("#"+form+" .error_"+firstError).offset().top-10)}, 'slow');
+								}
+							}else{
+								goToByScroll(error_div_id,form);
+							}
+							
+							if (typeof callback === "function") {
+								callback(false,{});
+							}
+							return false;
+						break;
+						default:
+							var error	=	'<ul class="client-side-error">';
+							$("#"+form).find('input,select,textarea,text').removeClass('border-red');
+							$.each(data,function(index,html){
+								error	+=	'<li>'+html+'</li>';
+								$("#"+form).find("#"+index).addClass('border-red');
+							});
+							error	+=	'</ul>';
+							error_msg	=	'<div class="alert alert-danger alert-dismissible site-color" role="alert"><button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>'+error+'</div>';
+							error_div.html(error_msg);
+							error_div.show();
+							if(isFormReset == 'modal-error'){
+								if($("#"+error_div_id).length>0){
+									$("#"+form).closest('.modal-scroll-on-error').animate({scrollTop:($("#"+error_div_id).offset().top-80)}, 'slow');
+								}
+							}else{
+								goToByScroll(error_div_id,form);
+							}
+							if (typeof callback === "function") {
+								callback(false,{});
+							}
+						break;
+					}
+				}catch(e){
+					$("#"+error_div_id).html('<div class="alert alert-danger alert-dismissible site-color" role="alert"><button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>'+r+'</div>');
+					error_div.html(r);
+					error_div.show();
+
+					if(isFormReset == 'modal-error'){
+						if($("#"+error_div_id).length>0){
+							$("#"+form).closest('.modal-scroll-on-error').animate({scrollTop:($("#"+error_div_id).offset().top-80)}, 'slow');
+						}
+					}else{
+						if($("#"+error_div_id).length>0){
+							goToByScroll(error_div_id,form);
+						}
+					}
+					if (typeof callback === "function") {
+						callback(false,{});
+					}
+				}
+				unblockedUI();
+			}
+			return false;
+		},
+		resetForm:false
+	};
+	
+	$("form#"+form).ajaxSubmit(options);
+	return false;
+}
+
+
+/*######################################################################################################################
+	 * Code is used for upload profile image*/
+		$(document).on('click', '.img-profile-add', function(e){
+			$('#profileImage').trigger('click');
+		});
+		
+		$('document').ready(function(){
+			$("#profileImage").change(function(e){
+				e.stopImmediatePropagation();
+				var status = checkImageSize('profileImage',IMAGE_UPLOAD_FILE_MAX_SIZE_TWO,'ajax');
+				if(status == true){
+					/*	
+					bootbox.confirm({
+						message: "Are you sure you want change profile image?",
+						buttons: {
+							confirm: {
+								className: 'btn btn-primary'
+							},
+							cancel: {
+								className: 'btn btn-primary btn_theme_blue_color'
+							}
+						},
+						callback: function (result) {
+							if (result) {*/
+								
+								
+								blockedUI();
+								
+								var options={
+									url: $('#UserProfileForm').attr('action'),
+									beforeSend: function(xhr ) {
+										blockedUI();
+									},
+									success: function(r){
+										unblockedUI();
+										var data = JSON.parse(r);
+										if(data['error'] == '0') {
+											showSuccessMessageTopRight(data['msg']);
+											$('.userProfileImageFigure').html(data['img']);
+										}else {
+											showErrorMessageTopRight(data['msg']);
+										}
+									},resetForm:false,
+								}
+								$("#UserProfileForm").ajaxSubmit(options);
+							/*}
+						}
+					});
+					*/
+					e.preventDefault();
+				}
+			});
+		});
+	/* End Code
+	 * ######################################################################################################################*/
+
+
+/** ##########  Function for  check image size validation  ######################## */
+function checkImageSize(field_id,max_size,submit_type,error_field_id){
+	if(error_field_id === undefined){ error_field_id = ''; 	}
+	var field_id 		= field_id;
+	var allowed_size 	= max_size * 1024 * 1024; //convert mb to kb
+	var submit_type 	= submit_type;
+	var error_field_id 	= error_field_id;
+	var size 			= parseFloat($("#"+field_id)[0].files[0].size).toFixed(2);
+	
+	if(size > allowed_size){
+		var msg 		= "File size should not be greater than "+max_size+' MB. Please compress your photo using online compression tools and try again.';
+		if(submit_type == 'ajax'){
+			$("#"+field_id).val('');
+			showErrorMessageTopRight(msg);
+		}else{
+			$("#"+field_id).val('');
+			$("#"+error_field_id).html('');
+			$("#"+error_field_id).html(msg);
+		}
+		return false;
+	}
+	else {
+		
+		var files = !!$("#"+field_id)[0].files ? $("#"+field_id)[0].files : [];
+		if (!files.length || !window.FileReader) return;
+		
+		if (/^image/.test( files[0].type)){
+			// only image file
+			var reader = new FileReader(); // instance of the FileReader
+			reader.readAsDataURL(files[0]); // read the local file
+			reader.onloadend = function(){
+				$("#pImage").html("<img src='"+this.result+"' class='profileImage' >");
+			}
+        } 
+		
+		if(error_field_id != ''){
+			$("#"+error_field_id).html('');
+		}
+		return true;
+	}
+}//end checkImageSize()
+ 
+
+/* delete reviews and ratings */
+$(document).on("click",".delete_review",function(e){
+	e.stopImmediatePropagation();
+	var msg = $(this).attr('data-rel');
+	var href = $(this).attr('href');
+	
+	bootbox.confirm({
+		message: msg,
+		buttons: {
+			confirm: {
+				className: 'btn btn-primary'
+			},
+			cancel: {
+				className: 'btn btn-primary btn_theme_blue_color'
+			}
+		},
+		callback: function (result) {
+			if (result) {
+				window.location.replace(href);
+			}
+		}
+	});
+	e.preventDefault();
+});
+/* delete reviews and ratings */
+
+
+/**
+ * Code for loade more reviews
+**/
+$(document).on('click','#load_moremydata',function(){
+    var href = $(this).data('href');
+    var id = $('.myid').attr('data-id');
+   
+    $.ajax({
+		url : href,
+		method : "POST",
+		headers: {
+			'X-CSRF-TOKEN': csrf_token
+		},
+		data : { 'id':id},
+		beforeSend:function(e){
+			blockedUI();
+		},
+		success : function(data)
+		{
+			unblockedUI();
+			$(".myid").attr("data-id",data.remain);
+			$(".rating-name-box").append(data.html);
+			if(data.count <= data.remain){
+				   $("#load_moremydata").hide();
+			}
+		}
+    });
+}); 
+
+ 
+    
+/** function used for search product list 
+* @param null
+*
+* response vendors list
+*/
+$(document).on("keyup","#header_keyword",function(){	
+	autocomplete();
+});
+
+function autocomplete(){ 
+	var header_search_type = $('#header_search_type').val();
+	$('#header_keyword').autocomplete({
+		minLength: 1,
+		source: function (request, response) {
+			if(header_search_type != '' && header_search_type =='product'){ 
+				$.ajax({
+					url: search_product_url,
+					headers:{"X-CSRF-TOKEN":csrf_token},
+					 data: {
+						'keyword': request.term,'search_type':header_search_type
+					},
+					type: "POST",
+					dataType: "json",
+					success: function (data) {
+						response(data.data);
+					}
+				});
+			}
+		}
+		
+	});
+}
+	
+	
+/** function used for showing confirm message before delete.
+* @param null
+*/	
+$(function(){	
+	$(document).on('click', '.del_confirm_box', function(e){
+		var postUrl = $(this).data('href');
+		msg = DELETE_CONFIRM_MESSAGE;
+        
+		bootbox.confirm({
+			message: msg,
+			buttons: {
+				confirm: {
+					className: 'btn btn-primary'
+				},
+				cancel: {
+					className: 'btn btn-primary btn_theme_blue_color'
+				}
+			},
+			callback: function (result) {
+				if (result) {
+					$.ajax({
+						url: postUrl,
+						beforeSend: function (e) {
+							blockedUI();
+						},
+						success: function (data) {
+							unblockedUI();
+							window.location.reload();
+						}
+					});
+				}
+			}
+		});
+		
+	});
+});
+
+
+	
+/** function used for showing confirm message before delete.
+* @param null
+*/	
+$(function(){	
+	$(document).on('click', '.alert_confirm_box', function(e){
+		var postUrl = $(this).data('href');
+		
+		var msg = $(this).data('alert');
+		
+		bootbox.confirm({
+			message: msg,
+			buttons: {
+				confirm: {
+					className: 'btn btn-primary'
+				},
+				cancel: {
+					className: 'btn btn-primary btn_theme_blue_color'
+				}
+			},
+			callback: function (result) {
+				if (result) {
+					window.location.replace(postUrl);
+				}
+			}
+		});
+	});
+});
+
+
+
+/** function used for equal height boxes starts here .
+* @param null
+*/	
+function resizeequalheight(){
+	equalHeight($(".makeequal"));
+}
+
+function equalHeight(group) {
+	tallest = 0;
+	group.height('');
+	group.each(function() {
+	thisHeight = $(this).height();
+	if(thisHeight > tallest) {
+		tallest = thisHeight;
+	}
+	});
+	group.height(tallest);
+}
+$(function(){
+	$(window).resize(function() {
+		setTimeout('resizeequalheight()',250)
+	});
+		setTimeout('resizeequalheight()',250) 
+});
+/** function used for equal height boxes end here .
+* @param null
+*/
+
+
+
+/**
+* For block whole ui when ajax starts
+*/
+function blockedUI() {
+    //$('.loading-cntant').fadeIn(100);
+    $("#loading").fadeIn(50);
+}
+
+/**
+* For unblock whole ui when ajax ends
+*/
+function unblockedUI() {
+  //  $('.loading-cntant').fadeOut(1000);
+   $("#loading").fadeOut(100);
+}
+
+ 
+$(document).ready(function(){
+	$('.navbar-toggler').on('click', function () {
+		$("body").toggleClass('open-menu')
+		$(".navbar_menu").toggleClass("show")
+		$("header").toggleClass("show")
+		$(this).toggleClass('open');
+	});
+
+	$('.dashboard_toggle').on('click', function () {
+		$("body").toggleClass('open-menu');
+		$(".sidebar_menu").toggleClass("show");
+		$(".overlay_bg").toggleClass("show");
+	});
+
+	$('.close_menu_btn').on('click', function () {
+		$("body").removeClass('open-menu');
+		$(".sidebar_menu").removeClass("show");
+		$(".overlay_bg").removeClass("show");
+	});
+});
+
+
+
+$(document).ready(function(){
+	if($('.multi_select_check').length){
+		$('.multi_select_check').multiselect({
+			columns: 1,
+			placeholder: 'Please select',
+			search: true,
+			searchOptions: {
+				'default': 'Please select',
+			},
+			selectAll: false
+		});
+	}
+});
+
+
+function openTakePledegeBox(pledege){
+	 alert()
+	blockedUI();
+	setTimeout(function(){
+		$('#takePledgeForm').modal('show');
+		unblockedUI();
+	}, 1000);
+}
